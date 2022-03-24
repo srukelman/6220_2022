@@ -10,8 +10,8 @@ import edu.wpi.first.wpilibj.smartdashboard.SendableChooser;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj.I2C;
 import edu.wpi.first.wpilibj.util.Color;
-import com.ctre.phoenix.motorcontrol.can.TalonSRX;
 import com.ctre.phoenix.motorcontrol.can.VictorSPX;
+import com.ctre.phoenix.motorcontrol.can.TalonSRX;
 import edu.wpi.first.networktables.NetworkTable;
 import edu.wpi.first.networktables.NetworkTableEntry;
 import edu.wpi.first.networktables.NetworkTableInstance;
@@ -27,6 +27,9 @@ import org.opencv.imgproc.Imgproc;
 import com.revrobotics.ColorMatchResult;
 import com.revrobotics.ColorMatch;
 import edu.wpi.first.wpilibj.XboxController;
+import edu.wpi.first.wpilibj.drive.DifferentialDrive;
+import edu.wpi.first.wpilibj.motorcontrol.Talon;
+import edu.wpi.first.wpilibj.motorcontrol.Victor;
 //import edu.wpi.first.wpilibj.GenericHID.*;
 import edu.wpi.first.cscore.*;
 import edu.wpi.first.cameraserver.CameraServer;
@@ -43,17 +46,17 @@ public class Robot extends TimedRobot {
   private String m_autoSelected;
   private final SendableChooser<String> m_chooser = new SendableChooser<>();
   private final SendableChooser<String> m_chooser_2 = new SendableChooser<>();
-  private VictorSPX LDriveV1 = new VictorSPX(8); //1st Left Drive Motor
-  private VictorSPX LDriveV2 = new VictorSPX(4); //2nd Left Drive Motor
-  private VictorSPX RDriveV1 = new VictorSPX(5); //1st Right Drive Motor
-  private VictorSPX RDriveV2 = new VictorSPX(7); //2nd Right Drive Motor
+  private TalonSRX LDriveMaster = new TalonSRX(2); //1st Left Drive Motor
+  private VictorSPX LDriveSlave = new VictorSPX(4); //2nd Left Drive Motor
+  private TalonSRX RDriveMaster = new TalonSRX(1); //1st Right Drive Motor
+  private VictorSPX RDriveSlave = new VictorSPX(5); //2nd Right Drive Motor
   //private VictorSPX Intake = new VictorSPX(); //Intake Motor
   //private VictorSPX ConveyorBelt = new VictorSPX(); //Conveyor Belt Motor
   //private VictorSPX Flywheel = new VictorSPX(); //Flywheel Motor
   private XboxController xbox; // XBOX Controller
   private XboxController xbox2; //xbox
-  private TalonSRX Outtake = new TalonSRX(1); //outtake motor
-  private TalonSRX Intake = new TalonSRX(3);
+  private VictorSPX Outtake = new VictorSPX(7); //outtake motor
+  private VictorSPX Intake = new VictorSPX(8);
   private final I2C.Port i2cPort = I2C.Port.kOnboard; //Color Sensor Port Object
   private final ColorSensorV3 m_colorSensor = new ColorSensorV3(i2cPort); //Color Sensor Object
   private final ColorMatch m_colorMatcher = new ColorMatch(); //Color Matcher Object (matches Colors with Color Sensor Output)
@@ -77,8 +80,8 @@ public class Robot extends TimedRobot {
   private double intakeSpeed = -.4;
   private Timer autonTimer;
   private double autonSpeed = .5;
-  private double corrector = .85;
-  ;
+  private double corrector = 1.05;
+  //private DifferentialDrive drive = new DifferentialDrive(LDriveMaster, RDriveMaster);
 
   /**
    * This function is run when the robot is first started up and should be used for any
@@ -98,6 +101,8 @@ public class Robot extends TimedRobot {
     xbox2 = new XboxController(3);
     m_colorMatcher.addColorMatch(blue); //adds the blue profile to the color matcher
     m_colorMatcher.addColorMatch(red); // adds the red profile to the color matcher
+    LDriveSlave.follow(LDriveMaster);
+    RDriveSlave.follow(RDriveMaster);
     // m_encoder_1 = new Counter(); // instantiates a new counter for the first encoder
     // m_encoder_1.setUpSource(2);
     // m_encoder_1.setUpDownCounterMode();
@@ -227,50 +232,50 @@ public class Robot extends TimedRobot {
     //  }
     
     //  //move left
-    //  LDriveV1.set(ControlMode.PercentOutput, leftTurn*forward / corrector);
-    //  LDriveV2.set(ControlMode.PercentOutput, leftTurn*forward / corrector);
+    //  LDriveMaster.set(ControlMode.PercentOutput, leftTurn*forward / corrector);
+    //  LDriveSlave.set(ControlMode.PercentOutput, leftTurn*forward / corrector);
     //  //move right
-    //  RDriveV1.set(ControlMode.PercentOutput, rightTurn*forward * corrector);
-    //  RDriveV2.set(ControlMode.PercentOutput, rightTurn*forward * corrector);
+    //  RDriveMaster.set(ControlMode.PercentOutput, rightTurn*forward * corrector);
+    //  RDriveSlave.set(ControlMode.PercentOutput, rightTurn*forward * corrector);
     double speed = -xbox.getRawAxis(1) * 0.6;
     double turn = xbox.getRawAxis(4) * 0.3;
 
-    double left = (speed + turn) * corrector;//slow down left motors to make driving straighter
+    double left = (speed + turn);//slow down left motors to make driving straighter
     double right = (speed - turn);
     if(xbox.getRawAxis(1)< .25 && xbox.getRawAxis(1) > -.25){
       left = (speed + turn);
       right = (speed - turn) * 1.5;
     }
     //set motors according to xbox input
-    LDriveV1.set(ControlMode.PercentOutput, left);
-    LDriveV2.set(ControlMode.PercentOutput, left);
-    RDriveV1.set(ControlMode.PercentOutput, -right);
-    RDriveV2.set(ControlMode.PercentOutput, -right);
+    LDriveMaster.set(ControlMode.PercentOutput, left);
+    LDriveSlave.set(ControlMode.PercentOutput, left);
+    RDriveMaster.set(ControlMode.PercentOutput, -right);
+    RDriveSlave.set(ControlMode.PercentOutput, -right);
     //Outtake.set(ControlMode.PercentOutput, xbox.getRawAxis(3));
 
    } else if(safety) {
 
        if(!(xbox.getRawAxis(1)<.2 && xbox.getRawAxis(1)>-.2)){
-        LDriveV1.set(ControlMode.PercentOutput, xbox.getRawAxis(1) * -1 * .9);
-        LDriveV2.set(ControlMode.PercentOutput, xbox.getRawAxis(1) * -1 * .9);
+        LDriveMaster.set(ControlMode.PercentOutput, xbox.getRawAxis(1) * -1 * .9);
+        LDriveSlave.set(ControlMode.PercentOutput, xbox.getRawAxis(1) * -1 * .9);
       } else {
-        LDriveV1.set(ControlMode.PercentOutput, 0);
-        LDriveV2.set(ControlMode.PercentOutput, 0);
+        LDriveMaster.set(ControlMode.PercentOutput, 0);
+        LDriveSlave.set(ControlMode.PercentOutput, 0);
      }
 
      if(!(xbox.getRawAxis(5)<.2 && xbox.getRawAxis(5)>-.2)){
-       RDriveV1.set(ControlMode.PercentOutput, xbox.getRawAxis(5));
-       RDriveV2.set(ControlMode.PercentOutput, xbox.getRawAxis(5));
+       RDriveMaster.set(ControlMode.PercentOutput, xbox.getRawAxis(5));
+       RDriveSlave.set(ControlMode.PercentOutput, xbox.getRawAxis(5));
      } else {
-       RDriveV1.set(ControlMode.PercentOutput, 0);
-       RDriveV2.set(ControlMode.PercentOutput, 0);
+       RDriveMaster.set(ControlMode.PercentOutput, 0);
+       RDriveSlave.set(ControlMode.PercentOutput, 0);
      }
 
    } else {
-     LDriveV1.set(ControlMode.PercentOutput, 0);
-     LDriveV2.set(ControlMode.PercentOutput, 0);
-     RDriveV1.set(ControlMode.PercentOutput, 0);
-     RDriveV2.set(ControlMode.PercentOutput, 0);
+     LDriveMaster.set(ControlMode.PercentOutput, 0);
+     LDriveSlave.set(ControlMode.PercentOutput, 0);
+     RDriveMaster.set(ControlMode.PercentOutput, 0);
+     RDriveSlave.set(ControlMode.PercentOutput, 0);
      Outtake.set(ControlMode.PercentOutput, 0);
      Intake.set(ControlMode.PercentOutput, 0);
    }
@@ -332,31 +337,31 @@ public class Robot extends TimedRobot {
     double firstDown = leave + 1;//3.5
     //speed up forward
     if(autonTimer.get()< firstRamp){
-      RDriveV1.set(ControlMode.PercentOutput, (autonTimer.get()) * autonSpeed * corrector * -1);
-      RDriveV2.set(ControlMode.PercentOutput, (autonTimer.get()) * autonSpeed * corrector * -1);
-      LDriveV1.set(ControlMode.PercentOutput, (autonTimer.get()) * autonSpeed);
-      LDriveV2.set(ControlMode.PercentOutput, (autonTimer.get()) * autonSpeed);
+      RDriveMaster.set(ControlMode.PercentOutput, (autonTimer.get()) * autonSpeed * corrector * -1);
+      RDriveSlave.set(ControlMode.PercentOutput, (autonTimer.get()) * autonSpeed * corrector * -1);
+      LDriveMaster.set(ControlMode.PercentOutput, (autonTimer.get()) * autonSpeed);
+      LDriveSlave.set(ControlMode.PercentOutput, (autonTimer.get()) * autonSpeed);
     }
     //drive forward
     if(autonTimer.get() >= firstRamp && autonTimer.get() < leave){
-      RDriveV1.set(ControlMode.PercentOutput, autonSpeed * corrector * -1);
-      RDriveV2.set(ControlMode.PercentOutput, autonSpeed * corrector * -1);
-      LDriveV1.set(ControlMode.PercentOutput, autonSpeed);
-      LDriveV2.set(ControlMode.PercentOutput, autonSpeed);
+      RDriveMaster.set(ControlMode.PercentOutput, autonSpeed * corrector * -1);
+      RDriveSlave.set(ControlMode.PercentOutput, autonSpeed * corrector * -1);
+      LDriveMaster.set(ControlMode.PercentOutput, autonSpeed);
+      LDriveSlave.set(ControlMode.PercentOutput, autonSpeed);
     }
     //slow down forward
     if(autonTimer.get() >= leave && autonTimer.get() < firstDown){
-      RDriveV1.set(ControlMode.PercentOutput, (firstDown - autonTimer.get()) * autonSpeed * corrector * -1);
-      RDriveV2.set(ControlMode.PercentOutput, (firstDown - autonTimer.get()) * autonSpeed * corrector * -1);
-      LDriveV1.set(ControlMode.PercentOutput, (firstDown - autonTimer.get()) * autonSpeed);
-      LDriveV2.set(ControlMode.PercentOutput, (firstDown - autonTimer.get()) * autonSpeed);
+      RDriveMaster.set(ControlMode.PercentOutput, (firstDown - autonTimer.get()) * autonSpeed * corrector * -1);
+      RDriveSlave.set(ControlMode.PercentOutput, (firstDown - autonTimer.get()) * autonSpeed * corrector * -1);
+      LDriveMaster.set(ControlMode.PercentOutput, (firstDown - autonTimer.get()) * autonSpeed);
+      LDriveSlave.set(ControlMode.PercentOutput, (firstDown - autonTimer.get()) * autonSpeed);
     }
     //stop
     else{
-      RDriveV1.set(ControlMode.PercentOutput, 0);
-      RDriveV2.set(ControlMode.PercentOutput, 0);
-      LDriveV1.set(ControlMode.PercentOutput, 0);
-      LDriveV2.set(ControlMode.PercentOutput, 0);
+      RDriveMaster.set(ControlMode.PercentOutput, 0);
+      RDriveSlave.set(ControlMode.PercentOutput, 0);
+      LDriveMaster.set(ControlMode.PercentOutput, 0);
+      LDriveSlave.set(ControlMode.PercentOutput, 0);
       Outtake.set(ControlMode.PercentOutput, 0);
       Intake.set(ControlMode.PercentOutput, 0);
     }
@@ -375,17 +380,17 @@ public class Robot extends TimedRobot {
     double secondDown = leave + 1;//12.5
     // //speed up backward
     // if(autonTimer.get() >= wait && autonTimer.get() < firstRamp){
-    //   RDriveV1.set(ControlMode.PercentOutput, autonTimer.get() * autonSpeed * corrector);
-    //   RDriveV2.set(ControlMode.PercentOutput, autonTimer.get() * autonSpeed * corrector);
-    //   LDriveV1.set(ControlMode.PercentOutput, autonTimer.get() * autonSpeed * -1 / corrector);
-    //   LDriveV2.set(ControlMode.PercentOutput, autonTimer.get() * autonSpeed * -1 / corrector);
+    //   RDriveMaster.set(ControlMode.PercentOutput, autonTimer.get() * autonSpeed * corrector);
+    //   RDriveSlave.set(ControlMode.PercentOutput, autonTimer.get() * autonSpeed * corrector);
+    //   LDriveMaster.set(ControlMode.PercentOutput, autonTimer.get() * autonSpeed * -1 / corrector);
+    //   LDriveSlave.set(ControlMode.PercentOutput, autonTimer.get() * autonSpeed * -1 / corrector);
     // }
     // //drive backward
     // if(autonTimer.get() >= firstRamp && autonTimer.get() < ramHub){
-    //   RDriveV1.set(ControlMode.PercentOutput, autonSpeed * corrector);
-    //   RDriveV2.set(ControlMode.PercentOutput, autonSpeed * corrector);
-    //   LDriveV1.set(ControlMode.PercentOutput, autonSpeed * -1 / corrector);
-    //   LDriveV2.set(ControlMode.PercentOutput, autonSpeed * -1 / corrector);
+    //   RDriveMaster.set(ControlMode.PercentOutput, autonSpeed * corrector);
+    //   RDriveSlave.set(ControlMode.PercentOutput, autonSpeed * corrector);
+    //   LDriveMaster.set(ControlMode.PercentOutput, autonSpeed * -1 / corrector);
+    //   LDriveSlave.set(ControlMode.PercentOutput, autonSpeed * -1 / corrector);
     // }
     //if(autonTimer.get() >= ramHub && autonTimer.get() < rampShoot){
     //speed up belt
@@ -395,56 +400,56 @@ public class Robot extends TimedRobot {
     //full speed belt
     if(autonTimer.get() >= rampShoot && autonTimer.get() < shoot){
       Outtake.set(ControlMode.PercentOutput, 1);
-      RDriveV1.set(ControlMode.PercentOutput, 0);
-      RDriveV2.set(ControlMode.PercentOutput, 0);
-      LDriveV1.set(ControlMode.PercentOutput, 0);
-      LDriveV2.set(ControlMode.PercentOutput, 0);
+      RDriveMaster.set(ControlMode.PercentOutput, 0);
+      RDriveSlave.set(ControlMode.PercentOutput, 0);
+      LDriveMaster.set(ControlMode.PercentOutput, 0);
+      LDriveSlave.set(ControlMode.PercentOutput, 0);
     }
     //stop and shoot
     // if(autonTimer.get() >= ramHub && autonTimer.get() < shoot){
     //   Outtake.set(ControlMode.PercentOutput, 1);
-    //   RDriveV1.set(ControlMode.PercentOutput, 0);
-    //   RDriveV2.set(ControlMode.PercentOutput, 0);
-    //   LDriveV1.set(ControlMode.PercentOutput, 0);
-    //   LDriveV2.set(ControlMode.PercentOutput, 0);
+    //   RDriveMaster.set(ControlMode.PercentOutput, 0);
+    //   RDriveSlave.set(ControlMode.PercentOutput, 0);
+    //   LDriveMaster.set(ControlMode.PercentOutput, 0);
+    //   LDriveSlave.set(ControlMode.PercentOutput, 0);
     // }
     //wait for other bots to get out of the way
     if(autonTimer.get() >= shoot && autonTimer.get() < wait){
       Outtake.set(ControlMode.PercentOutput, 0);
-      RDriveV1.set(ControlMode.PercentOutput, 0);
-      RDriveV2.set(ControlMode.PercentOutput, 0);
-      LDriveV1.set(ControlMode.PercentOutput, 0);
-      LDriveV2.set(ControlMode.PercentOutput, 0);
+      RDriveMaster.set(ControlMode.PercentOutput, 0);
+      RDriveSlave.set(ControlMode.PercentOutput, 0);
+      LDriveMaster.set(ControlMode.PercentOutput, 0);
+      LDriveSlave.set(ControlMode.PercentOutput, 0);
       Outtake.set(ControlMode.PercentOutput, 0);
       Intake.set(ControlMode.PercentOutput, 0);
     }
     //speed up forward (away from hub)
     if(autonTimer.get() >= wait && autonTimer.get() <= secondRamp){
-      RDriveV1.set(ControlMode.PercentOutput, (autonTimer.get()-shoot) * autonSpeed  * -1);
-      RDriveV2.set(ControlMode.PercentOutput, (autonTimer.get()-shoot) * autonSpeed  * -1);
-      LDriveV1.set(ControlMode.PercentOutput, (autonTimer.get()-shoot) * autonSpeed* corrector);
-      LDriveV2.set(ControlMode.PercentOutput, (autonTimer.get()-shoot) * autonSpeed* corrector);
+      RDriveMaster.set(ControlMode.PercentOutput, (autonTimer.get()-shoot) * autonSpeed  * -1);
+      RDriveSlave.set(ControlMode.PercentOutput, (autonTimer.get()-shoot) * autonSpeed  * -1);
+      LDriveMaster.set(ControlMode.PercentOutput, (autonTimer.get()-shoot) * autonSpeed* corrector);
+      LDriveSlave.set(ControlMode.PercentOutput, (autonTimer.get()-shoot) * autonSpeed* corrector);
     }
     //drive forward
     if(autonTimer.get() >= secondRamp && autonTimer.get()<leave){
-      RDriveV1.set(ControlMode.PercentOutput, autonSpeed  * -1);
-      RDriveV2.set(ControlMode.PercentOutput, autonSpeed  * -1);
-      LDriveV1.set(ControlMode.PercentOutput, autonSpeed * corrector);
-      LDriveV2.set(ControlMode.PercentOutput, autonSpeed * corrector);
+      RDriveMaster.set(ControlMode.PercentOutput, autonSpeed  * -1);
+      RDriveSlave.set(ControlMode.PercentOutput, autonSpeed  * -1);
+      LDriveMaster.set(ControlMode.PercentOutput, autonSpeed * corrector);
+      LDriveSlave.set(ControlMode.PercentOutput, autonSpeed * corrector);
     }
     //slow down
     if(autonTimer.get() >= leave && autonTimer.get()<secondDown){
-      RDriveV1.set(ControlMode.PercentOutput, (secondDown - autonTimer.get()) * autonSpeed * -1);
-      RDriveV2.set(ControlMode.PercentOutput, (secondDown - autonTimer.get()) * autonSpeed * -1);
-      LDriveV1.set(ControlMode.PercentOutput, (secondDown - autonTimer.get()) * autonSpeed * corrector);
-      LDriveV2.set(ControlMode.PercentOutput, (secondDown - autonTimer.get()) * autonSpeed* corrector) ;
+      RDriveMaster.set(ControlMode.PercentOutput, (secondDown - autonTimer.get()) * autonSpeed * -1);
+      RDriveSlave.set(ControlMode.PercentOutput, (secondDown - autonTimer.get()) * autonSpeed * -1);
+      LDriveMaster.set(ControlMode.PercentOutput, (secondDown - autonTimer.get()) * autonSpeed * corrector);
+      LDriveSlave.set(ControlMode.PercentOutput, (secondDown - autonTimer.get()) * autonSpeed* corrector) ;
     }
     //stop
     if(autonTimer.get() >= secondDown){
-      RDriveV1.set(ControlMode.PercentOutput, 0);
-      RDriveV2.set(ControlMode.PercentOutput, 0);
-      LDriveV1.set(ControlMode.PercentOutput, 0);
-      LDriveV2.set(ControlMode.PercentOutput, 0);
+      RDriveMaster.set(ControlMode.PercentOutput, 0);
+      RDriveSlave.set(ControlMode.PercentOutput, 0);
+      LDriveMaster.set(ControlMode.PercentOutput, 0);
+      LDriveSlave.set(ControlMode.PercentOutput, 0);
       Outtake.set(ControlMode.PercentOutput, 0);
       Intake.set(ControlMode.PercentOutput, 0);
     }
@@ -467,17 +472,17 @@ public class Robot extends TimedRobot {
     double tempcorr = .9;
     // //speed up backward
     // if(autonTimer.get() >= wait && autonTimer.get() < firstRamp){
-    //   RDriveV1.set(ControlMode.PercentOutput, autonTimer.get() * autonSpeed * corrector);
-    //   RDriveV2.set(ControlMode.PercentOutput, autonTimer.get() * autonSpeed * corrector);
-    //   LDriveV1.set(ControlMode.PercentOutput, autonTimer.get() * autonSpeed * -1 / corrector);
-    //   LDriveV2.set(ControlMode.PercentOutput, autonTimer.get() * autonSpeed * -1 / corrector);
+    //   RDriveMaster.set(ControlMode.PercentOutput, autonTimer.get() * autonSpeed * corrector);
+    //   RDriveSlave.set(ControlMode.PercentOutput, autonTimer.get() * autonSpeed * corrector);
+    //   LDriveMaster.set(ControlMode.PercentOutput, autonTimer.get() * autonSpeed * -1 / corrector);
+    //   LDriveSlave.set(ControlMode.PercentOutput, autonTimer.get() * autonSpeed * -1 / corrector);
     // }
     // //drive backward
     // if(autonTimer.get() >= firstRamp && autonTimer.get() < ramHub){
-    //   RDriveV1.set(ControlMode.PercentOutput, autonSpeed * corrector);
-    //   RDriveV2.set(ControlMode.PercentOutput, autonSpeed * corrector);
-    //   LDriveV1.set(ControlMode.PercentOutput, autonSpeed * -1 / corrector);
-    //   LDriveV2.set(ControlMode.PercentOutput, autonSpeed * -1 / corrector);
+    //   RDriveMaster.set(ControlMode.PercentOutput, autonSpeed * corrector);
+    //   RDriveSlave.set(ControlMode.PercentOutput, autonSpeed * corrector);
+    //   LDriveMaster.set(ControlMode.PercentOutput, autonSpeed * -1 / corrector);
+    //   LDriveSlave.set(ControlMode.PercentOutput, autonSpeed * -1 / corrector);
     // }
     //if(autonTimer.get() >= ramHub && autonTimer.get() < rampShoot){
     if(autonTimer.get() < rampShoot){
@@ -485,69 +490,69 @@ public class Robot extends TimedRobot {
     }
     if(autonTimer.get() >= rampShoot && autonTimer.get() < shoot){
       Outtake.set(ControlMode.PercentOutput, 1);
-      RDriveV1.set(ControlMode.PercentOutput, 0);
-      RDriveV2.set(ControlMode.PercentOutput, 0);
-      LDriveV1.set(ControlMode.PercentOutput, 0);
-      LDriveV2.set(ControlMode.PercentOutput, 0);
+      RDriveMaster.set(ControlMode.PercentOutput, 0);
+      RDriveSlave.set(ControlMode.PercentOutput, 0);
+      LDriveMaster.set(ControlMode.PercentOutput, 0);
+      LDriveSlave.set(ControlMode.PercentOutput, 0);
     }
     //stop and shoot
     // if(autonTimer.get() >= ramHub && autonTimer.get() < shoot){
     //   Outtake.set(ControlMode.PercentOutput, 1);
-    //   RDriveV1.set(ControlMode.PercentOutput, 0);
-    //   RDriveV2.set(ControlMode.PercentOutput, 0);
-    //   LDriveV1.set(ControlMode.PercentOutput, 0);
-    //   LDriveV2.set(ControlMode.PercentOutput, 0);
+    //   RDriveMaster.set(ControlMode.PercentOutput, 0);
+    //   RDriveSlave.set(ControlMode.PercentOutput, 0);
+    //   LDriveMaster.set(ControlMode.PercentOutput, 0);
+    //   LDriveSlave.set(ControlMode.PercentOutput, 0);
     // }
     //stop shooting and speed up forward
     if(autonTimer.get() >= shoot && autonTimer.get() < secondRamp){
       Outtake.set(ControlMode.PercentOutput, 0);
-      RDriveV1.set(ControlMode.PercentOutput, (autonTimer.get()-shoot) * firstSpeed  * -1);
-      RDriveV2.set(ControlMode.PercentOutput, (autonTimer.get()-shoot) * firstSpeed  * -1);
-      LDriveV1.set(ControlMode.PercentOutput, (autonTimer.get()-shoot) * firstSpeed * tempcorr);
-      LDriveV2.set(ControlMode.PercentOutput, (autonTimer.get()-shoot) * firstSpeed * tempcorr);
+      RDriveMaster.set(ControlMode.PercentOutput, (autonTimer.get()-shoot) * firstSpeed  * -1);
+      RDriveSlave.set(ControlMode.PercentOutput, (autonTimer.get()-shoot) * firstSpeed  * -1);
+      LDriveMaster.set(ControlMode.PercentOutput, (autonTimer.get()-shoot) * firstSpeed * tempcorr);
+      LDriveSlave.set(ControlMode.PercentOutput, (autonTimer.get()-shoot) * firstSpeed * tempcorr);
     }
     //drive forward
     if(autonTimer.get() >= secondRamp && autonTimer.get()<leave){
-      RDriveV1.set(ControlMode.PercentOutput, firstSpeed  * -1);
-      RDriveV2.set(ControlMode.PercentOutput, firstSpeed  * -1);
-      LDriveV1.set(ControlMode.PercentOutput, firstSpeed * tempcorr);
-      LDriveV2.set(ControlMode.PercentOutput, firstSpeed * tempcorr);
+      RDriveMaster.set(ControlMode.PercentOutput, firstSpeed  * -1);
+      RDriveSlave.set(ControlMode.PercentOutput, firstSpeed  * -1);
+      LDriveMaster.set(ControlMode.PercentOutput, firstSpeed * tempcorr);
+      LDriveSlave.set(ControlMode.PercentOutput, firstSpeed * tempcorr);
     }
     //stop driving to lower intake
     if(autonTimer.get() >= leave && autonTimer.get() < stopFast){
-      RDriveV1.set(ControlMode.PercentOutput, 0);
-      RDriveV2.set(ControlMode.PercentOutput, 0);
-      LDriveV1.set(ControlMode.PercentOutput, 0);
-      LDriveV2.set(ControlMode.PercentOutput, 0);
+      RDriveMaster.set(ControlMode.PercentOutput, 0);
+      RDriveSlave.set(ControlMode.PercentOutput, 0);
+      LDriveMaster.set(ControlMode.PercentOutput, 0);
+      LDriveSlave.set(ControlMode.PercentOutput, 0);
     }
     //start driving again while spinnning intake
     if(autonTimer.get() >= stopFast && autonTimer.get() < pickup){
       Intake.set(ControlMode.PercentOutput, -.5);
-      RDriveV1.set(ControlMode.PercentOutput, (autonTimer.get()-stopFast) * autonSpeed  * -1);
-      RDriveV2.set(ControlMode.PercentOutput, (autonTimer.get()-stopFast) * autonSpeed  * -1);
-      LDriveV1.set(ControlMode.PercentOutput, (autonTimer.get()-stopFast) * autonSpeed* tempcorr);
-      LDriveV2.set(ControlMode.PercentOutput, (autonTimer.get()-stopFast) * autonSpeed* tempcorr);
+      RDriveMaster.set(ControlMode.PercentOutput, (autonTimer.get()-stopFast) * autonSpeed  * -1);
+      RDriveSlave.set(ControlMode.PercentOutput, (autonTimer.get()-stopFast) * autonSpeed  * -1);
+      LDriveMaster.set(ControlMode.PercentOutput, (autonTimer.get()-stopFast) * autonSpeed* tempcorr);
+      LDriveSlave.set(ControlMode.PercentOutput, (autonTimer.get()-stopFast) * autonSpeed* tempcorr);
     }
     //slow down
     if(autonTimer.get() >= pickup && autonTimer.get()<secondDown){
-      RDriveV1.set(ControlMode.PercentOutput, (secondDown - autonTimer.get()) * autonSpeed * -1);
-      RDriveV2.set(ControlMode.PercentOutput, (secondDown - autonTimer.get()) * autonSpeed * -1);
-      LDriveV1.set(ControlMode.PercentOutput, (secondDown - autonTimer.get()) * autonSpeed * tempcorr);
-      LDriveV2.set(ControlMode.PercentOutput, (secondDown - autonTimer.get()) * autonSpeed * tempcorr) ;
+      RDriveMaster.set(ControlMode.PercentOutput, (secondDown - autonTimer.get()) * autonSpeed * -1);
+      RDriveSlave.set(ControlMode.PercentOutput, (secondDown - autonTimer.get()) * autonSpeed * -1);
+      LDriveMaster.set(ControlMode.PercentOutput, (secondDown - autonTimer.get()) * autonSpeed * tempcorr);
+      LDriveSlave.set(ControlMode.PercentOutput, (secondDown - autonTimer.get()) * autonSpeed * tempcorr) ;
     }
     //stop driving and keep intake running
     if(autonTimer.get() >= secondDown && autonTimer.get() < finishIntake){
-      RDriveV1.set(ControlMode.PercentOutput, 0);
-      RDriveV2.set(ControlMode.PercentOutput, 0);
-      LDriveV1.set(ControlMode.PercentOutput, 0);
-      LDriveV2.set(ControlMode.PercentOutput, 0);
+      RDriveMaster.set(ControlMode.PercentOutput, 0);
+      RDriveSlave.set(ControlMode.PercentOutput, 0);
+      LDriveMaster.set(ControlMode.PercentOutput, 0);
+      LDriveSlave.set(ControlMode.PercentOutput, 0);
     }
     //stop all
     if(autonTimer.get() >= finishIntake){
-      RDriveV1.set(ControlMode.PercentOutput, 0);
-      RDriveV2.set(ControlMode.PercentOutput, 0);
-      LDriveV1.set(ControlMode.PercentOutput, 0);
-      LDriveV2.set(ControlMode.PercentOutput, 0);
+      RDriveMaster.set(ControlMode.PercentOutput, 0);
+      RDriveSlave.set(ControlMode.PercentOutput, 0);
+      LDriveMaster.set(ControlMode.PercentOutput, 0);
+      LDriveSlave.set(ControlMode.PercentOutput, 0);
       Outtake.set(ControlMode.PercentOutput, 0);
       Intake.set(ControlMode.PercentOutput, 0);
     }
