@@ -12,25 +12,12 @@ import edu.wpi.first.wpilibj.I2C;
 import edu.wpi.first.wpilibj.util.Color;
 import com.ctre.phoenix.motorcontrol.can.VictorSPX;
 import com.ctre.phoenix.motorcontrol.can.TalonSRX;
-import edu.wpi.first.networktables.NetworkTable;
-import edu.wpi.first.networktables.NetworkTableEntry;
-import edu.wpi.first.networktables.NetworkTableInstance;
-//import javax.swing.plaf.basic.BasicInternalFrameTitlePane.SystemMenuBar;
 import com.ctre.phoenix.motorcontrol.ControlMode;
-import edu.wpi.first.wpilibj.Joystick;
-import edu.wpi.first.wpilibj.AnalogInput;
 import edu.wpi.first.wpilibj.Counter;
 import com.revrobotics.ColorSensorV3;
-import org.opencv.core.*;
-import org.opencv.core.Mat;
-import org.opencv.imgproc.Imgproc;
 import com.revrobotics.ColorMatchResult;
 import com.revrobotics.ColorMatch;
 import edu.wpi.first.wpilibj.XboxController;
-import edu.wpi.first.wpilibj.drive.DifferentialDrive;
-import edu.wpi.first.wpilibj.motorcontrol.Talon;
-import edu.wpi.first.wpilibj.motorcontrol.Victor;
-//import edu.wpi.first.wpilibj.GenericHID.*;
 import edu.wpi.first.cscore.*;
 import edu.wpi.first.cameraserver.CameraServer;
 
@@ -50,9 +37,6 @@ public class Robot extends TimedRobot {
   private VictorSPX LDriveSlave = new VictorSPX(8); //2nd Left Drive Motor
   private VictorSPX RDriveMaster = new VictorSPX(7); //1st Right Drive Motor
   private VictorSPX RDriveSlave = new VictorSPX(5); //2nd Right Drive Motor
-  //private VictorSPX Intake = new VictorSPX(); //Intake Motor
-  //private VictorSPX ConveyorBelt = new VictorSPX(); //Conveyor Belt Motor
-  //private VictorSPX Flywheel = new VictorSPX(); //Flywheel Motor
   private XboxController xbox; // XBOX Controller
   private XboxController xbox2; //xbox
   private TalonSRX Outtake = new TalonSRX(1); //outtake motor
@@ -62,26 +46,13 @@ public class Robot extends TimedRobot {
   private final ColorMatch m_colorMatcher = new ColorMatch(); //Color Matcher Object (matches Colors with Color Sensor Output)
   private final Color blue = Color.kBlue; //The Color Blue
   private final Color red = Color.kRed; //The Color Red
-  private Counter m_encoder_1; //Left Wheel Rotation Counter
-  private Counter m_encoder_2; //Right Wheel Rotation Counter
-  //private String previousColor = ""; //usteless atm
   private boolean safety = true;
-  private boolean outtakeSlow = false;
-  private boolean outtakeFast = false;
-  private boolean outtakeOn = false;
-  private boolean intakeOn = false;
-  private Thread m_visionThread_limelight;
   private boolean isTankControls = false;
-  private Thread m_visionThread_webcam;
-  private int forward = 1;
-  private double leftTurn;
-  private double rightTurn;
   private boolean intakeFast = false;
-  private double intakeSpeed = -.4;
   private Timer autonTimer;
   private double autonSpeed = .5;
   private double corrector = 1.05;
-  //private DifferentialDrive drive = new DifferentialDrive(LDriveMaster, RDriveMaster);
+  private Thread m_visionThread_limelight;
 
   /**
    * This function is run when the robot is first started up and should be used for any
@@ -95,26 +66,13 @@ public class Robot extends TimedRobot {
     SmartDashboard.putNumber("distanceToDrive", .85);
     SmartDashboard.putBoolean("Intake Fast", intakeFast);
     SmartDashboard.putBoolean("Safety", safety);
-    //js1 = new Joystick(0);
-    //js2 = new Joystick(1);
     xbox = new XboxController(2);//XBOX Controller is the 3rd controller after the 2 joysticks
     xbox2 = new XboxController(3);
     m_colorMatcher.addColorMatch(blue); //adds the blue profile to the color matcher
     m_colorMatcher.addColorMatch(red); // adds the red profile to the color matcher
     LDriveSlave.follow(LDriveMaster);
     RDriveSlave.follow(RDriveMaster);
-    // m_encoder_1 = new Counter(); // instantiates a new counter for the first encoder
-    // m_encoder_1.setUpSource(2);
-    // m_encoder_1.setUpDownCounterMode();
-    // m_encoder_1.setDistancePerPulse(Math.PI*6); //distance per pulse PI*diameter of wheel (6" in this case)
-    // m_encoder_1.setMaxPeriod(.2); //max period to determine if stopped
-    // m_encoder_1.reset();
-    // m_encoder_2 = new Counter(); //instantiates a new counter for the second encoder
-    // m_encoder_2.setUpSource(3);
-    // m_encoder_2.setUpDownCounterMode();
-    // m_encoder_2.setDistancePerPulse(Math.PI*6); //distance per pulse PI*diameter of wheel (6" in this case)
-    // m_encoder_2.setMaxPeriod(.2); //max period to determine if stopped
-    // m_encoder_2.reset();
+
 
     m_visionThread_limelight =
         new Thread(
@@ -151,18 +109,6 @@ public class Robot extends TimedRobot {
    */
   @Override
   public void robotPeriodic() {
-    // int count1= m_encoder_1.get(); //get the number of encoder counts
-    // double dist1 = m_encoder_1.getDistance(); //get the distance the wheel has spun
-    // double rate1 = m_encoder_1.getRate(); //get the rate at which the wheel is spinning
-    // SmartDashboard.putNumber("Encoder Counts", count1);
-    // SmartDashboard.putNumber("Distance", dist1);
-    // SmartDashboard.putNumber("Velocity (in/s)", rate1);
-    // int count2= m_encoder_2.get(); //get the number of encoder counts
-    // double dist2 = m_encoder_2.getDistance(); //get the distance the wheel has spun
-    // double rate2 = m_encoder_2.getRate(); //get the rate at which the wheel is spinning
-    // SmartDashboard.putNumber("Encoder Counts", count2);
-    // SmartDashboard.putNumber("Distance", dist2);
-    // SmartDashboard.putNumber("Velocity (in/s)", rate2);
     corrector = SmartDashboard.getNumber("distanceToDrive",  .85);
     Color detectedColor = m_colorSensor.getColor();
     String colorString; 
@@ -174,9 +120,6 @@ public class Robot extends TimedRobot {
     } else {
       colorString = "Unknown";
     }
-    
-    //System.out.println(colorString);
-    //previousColor = colorString;
   }
 
   /**
@@ -201,42 +144,18 @@ public class Robot extends TimedRobot {
   /** This function is called periodically during autonomous. */
   @Override
   public void autonomousPeriodic() {
-    //double corrector = .8;
-    autonThree();//shoot then move then intake: takes 7.2 seconds
-    //autonTwo();//shoot then move: takes 12.5 seconds
-    //autonOne();//move: takes 3.5 seconds
+    autonThree();
   }
 
   /** This function is called once when teleop is enabled. */
   @Override
-  public void teleopInit() {
-    
+  public void teleopInit() { 
   }
 
  /** This function is called periodically during operator control. */
  @Override
  public void teleopPeriodic() {
    if(safety && !isTankControls){//safety is off and using arcade controls
-    //  //turn modifiers (high is more, left is negative)
-    //  leftTurn = 0;
-    //  rightTurn = 0;
-      
-    //  if(xbox.getRawAxis(1) < .2 || xbox.getRawAxis(1) > .2){ //going forward and backward
-    //    leftTurn -= .75*xbox.getRawAxis(1);
-    //    rightTurn += .75*xbox.getRawAxis(1);
-    //  }
-    //  if(xbox.getRawAxis(4) < -.2 || xbox.getRawAxis(4) > .2){ //turning
-    //    leftTurn += .25*xbox.getRawAxis(4);
-    //    rightTurn += .25*xbox.getRawAxis(4);
-       
-    //  }
-    
-    //  //move left
-    //  LDriveMaster.set(ControlMode.PercentOutput, leftTurn*forward / corrector);
-    //  LDriveSlave.set(ControlMode.PercentOutput, leftTurn*forward / corrector);
-    //  //move right
-    //  RDriveMaster.set(ControlMode.PercentOutput, rightTurn*forward * corrector);
-    //  RDriveSlave.set(ControlMode.PercentOutput, rightTurn*forward * corrector);
     double speed = -xbox.getRawAxis(1) * 0.6;
     double turn = xbox.getRawAxis(4) * 0.3;
 
@@ -255,9 +174,9 @@ public class Robot extends TimedRobot {
 
    } else {
      LDriveMaster.set(ControlMode.PercentOutput, 0);
-     //LDriveSlave.set(ControlMode.PercentOutput, 0);
+     LDriveSlave.set(ControlMode.PercentOutput, 0);
      RDriveMaster.set(ControlMode.PercentOutput, 0);
-     //RDriveSlave.set(ControlMode.PercentOutput, 0);
+     RDriveSlave.set(ControlMode.PercentOutput, 0);
      Outtake.set(ControlMode.PercentOutput, 0);
      Intake.set(ControlMode.PercentOutput, 0);
    }
@@ -278,15 +197,6 @@ public class Robot extends TimedRobot {
  }
  if(xbox2.getLeftBumper()){
    Intake.set(ControlMode.PercentOutput, .7);
- }
-
-
- //intake controllers
- if(xbox.getAButtonPressed()){
-   forward *= -1;
- }
- if(xbox.getBButtonPressed()){
-   safety = !safety;
  }
  if(xbox.getYButtonPressed()){
    isTankControls = !isTankControls;
