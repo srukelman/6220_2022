@@ -46,17 +46,17 @@ public class Robot extends TimedRobot {
   private String m_autoSelected;
   private final SendableChooser<String> m_chooser = new SendableChooser<>();
   private final SendableChooser<String> m_chooser_2 = new SendableChooser<>();
-  private TalonSRX LDriveMaster = new TalonSRX(2); //1st Left Drive Motor
-  private VictorSPX LDriveSlave = new VictorSPX(4); //2nd Left Drive Motor
-  private TalonSRX RDriveMaster = new TalonSRX(1); //1st Right Drive Motor
+  private VictorSPX LDriveMaster = new VictorSPX(4); //1st Left Drive Motor
+  private VictorSPX LDriveSlave = new VictorSPX(8); //2nd Left Drive Motor
+  private VictorSPX RDriveMaster = new VictorSPX(7); //1st Right Drive Motor
   private VictorSPX RDriveSlave = new VictorSPX(5); //2nd Right Drive Motor
   //private VictorSPX Intake = new VictorSPX(); //Intake Motor
   //private VictorSPX ConveyorBelt = new VictorSPX(); //Conveyor Belt Motor
   //private VictorSPX Flywheel = new VictorSPX(); //Flywheel Motor
   private XboxController xbox; // XBOX Controller
   private XboxController xbox2; //xbox
-  private VictorSPX Outtake = new VictorSPX(7); //outtake motor
-  private VictorSPX Intake = new VictorSPX(8);
+  private TalonSRX Outtake = new TalonSRX(1); //outtake motor
+  private TalonSRX Intake = new TalonSRX(3);
   private final I2C.Port i2cPort = I2C.Port.kOnboard; //Color Sensor Port Object
   private final ColorSensorV3 m_colorSensor = new ColorSensorV3(i2cPort); //Color Sensor Object
   private final ColorMatch m_colorMatcher = new ColorMatch(); //Color Matcher Object (matches Colors with Color Sensor Output)
@@ -253,29 +253,11 @@ public class Robot extends TimedRobot {
     RDriveSlave.set(ControlMode.PercentOutput, -right);
     //Outtake.set(ControlMode.PercentOutput, xbox.getRawAxis(3));
 
-   } else if(safety) {
-
-       if(!(xbox.getRawAxis(1)<.2 && xbox.getRawAxis(1)>-.2)){
-        LDriveMaster.set(ControlMode.PercentOutput, xbox.getRawAxis(1) * -1 * .9);
-        LDriveSlave.set(ControlMode.PercentOutput, xbox.getRawAxis(1) * -1 * .9);
-      } else {
-        LDriveMaster.set(ControlMode.PercentOutput, 0);
-        LDriveSlave.set(ControlMode.PercentOutput, 0);
-     }
-
-     if(!(xbox.getRawAxis(5)<.2 && xbox.getRawAxis(5)>-.2)){
-       RDriveMaster.set(ControlMode.PercentOutput, xbox.getRawAxis(5));
-       RDriveSlave.set(ControlMode.PercentOutput, xbox.getRawAxis(5));
-     } else {
-       RDriveMaster.set(ControlMode.PercentOutput, 0);
-       RDriveSlave.set(ControlMode.PercentOutput, 0);
-     }
-
    } else {
      LDriveMaster.set(ControlMode.PercentOutput, 0);
-     LDriveSlave.set(ControlMode.PercentOutput, 0);
+     //LDriveSlave.set(ControlMode.PercentOutput, 0);
      RDriveMaster.set(ControlMode.PercentOutput, 0);
-     RDriveSlave.set(ControlMode.PercentOutput, 0);
+     //RDriveSlave.set(ControlMode.PercentOutput, 0);
      Outtake.set(ControlMode.PercentOutput, 0);
      Intake.set(ControlMode.PercentOutput, 0);
    }
